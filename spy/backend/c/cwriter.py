@@ -371,6 +371,9 @@ class CFuncWriter:
             return C.Literal(const.fqn.c_name)
         elif isinstance(w_obj, W_Func):
             return C.Literal(const.fqn.c_name)
+        elif isinstance(w_obj, W_Type):
+            # XXXXXXXXX
+            return C.Literal("0")
         else:
             assert False
 

@@ -97,51 +97,55 @@ def get_qualifiers(x: QUALIFIERS) -> list['FQN']:
 class NSPart:
     name: str
     qualifiers: list['FQN']
+    suffix: str = ''
 
-    def __init__(self, name: str, quals: QUALIFIERS=None) -> None:
+    def __init__(self, name: str, quals: QUALIFIERS=None, suffix: str='') -> None:
         self.name = name
         self.qualifiers = get_qualifiers(quals)
+        self.suffix = suffix
 
     def __str__(self) -> str:
-        if len(self.qualifiers) == 0:
-            return self.name
-        else:
+        base = self.name
+        if len(self.qualifiers) > 0:
             quals = ', '.join(q.human_name for q in self.qualifiers)
-            return f'{self.name}[{quals}]'
+            base = f'{base}[{quals}]'
+        if self.suffix:
+            base = f'{base}#{self.suffix}'
+        return base
 
     @property
     def c_name(self) -> str:
         name = self.name.replace('.', '_')
         if len(self.qualifiers) == 0:
-            return name
+            base = name
         else:
             quals = '_'.join(fqn.c_name_plain for fqn in self.qualifiers)
-            return f'{name}__{quals}'
+            base = f'{name}__{quals}'
+        if self.suffix:
+            base = f'{base}${self.suffix}'
+        return base
 
 
 class FQN:
     parts: list[NSPart]
-    suffix: str
 
-    def __new__(cls, x: str | PARTS, *, suffix: str = '') -> 'FQN':
+    def __new__(cls, x: str | PARTS) -> 'FQN':
         """
         Supported overloads:
             FQN(x: str)
-            FQN(x: PARTS, *, suffix='')
+            FQN(x: PARTS)
         """
         from .fqn_parser import FQNParser
         if isinstance(x, str):
-            assert suffix == ''
             return FQNParser(x).parse()
         else:
             fqn = super().__new__(cls)
             fqn.parts = get_parts(x)
-            fqn.suffix = suffix
             return fqn
 
     def with_suffix(self, suffix: str) -> 'FQN':
         res = FQN(self.parts)
-        res.suffix = suffix
+        res.parts[-1].suffix = suffix
         return res
 
     def __repr__(self) -> str:
@@ -162,11 +166,7 @@ class FQN:
         parts = self.parts
         if human and str(parts[0]) == 'builtins':
             parts = parts[1:]
-        s = '::'.join(str(part) for part in parts)
-
-        if self.suffix != '':
-            s += f'#{self.suffix}'
-        return s
+        return '::'.join(str(part) for part in parts)
 
     @property
     def fullname(self) -> str:
@@ -200,6 +200,11 @@ class FQN:
     @property
     def symbol_name(self) -> str:
         return str(self.parts[-1])
+
+    @property
+    def suffix(self) -> str:
+        """Returns the suffix of the last part"""
+        return self.parts[-1].suffix if self.parts else ''
 
     def join(self, name: str, qualifiers: QUALIFIERS=None) -> 'FQN':
         """
@@ -244,11 +249,7 @@ class FQN:
         """
         Like c_name, but without the spy_ prefix
         """
-        parts = [part.c_name for part in self.parts]
-        cn = '$'.join(parts)
-        if self.suffix != '':
-            cn += '$' + self.suffix
-        return cn
+        return '$'.join(part.c_name for part in self.parts)
 
     @property
     def spy_name(self) -> str:

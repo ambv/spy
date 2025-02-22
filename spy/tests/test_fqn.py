@@ -53,6 +53,22 @@ def test_nested_qualifiers():
     a = FQN("mod::dict[str, unsafe::ptr[mymod::Point]]")
     assert a.fullname == "mod::dict[str, unsafe::ptr[mymod::Point]]"
 
+def test_nested_suffix():
+    a = FQN("a::b#1::c")
+    assert a.fullname == "a::b#1::c"
+    assert a.parts[0].name == "a"
+    assert a.parts[1].name == "b"
+    assert a.parts[1].suffix == "1"
+    assert a.parts[2].name == "c"
+    assert a.parts[2].suffix == ""
+
+def test_multiple_suffixes():
+    a = FQN("a#1::b#2::c#3")
+    assert a.fullname == "a#1::b#2::c#3"
+    assert a.parts[0].suffix == "1"
+    assert a.parts[1].suffix == "2"
+    assert a.parts[2].suffix == "3"
+
 def test_FQN_join():
     a = FQN("a")
     b = a.join("b")

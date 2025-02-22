@@ -78,24 +78,22 @@ class FQNParser:
                 self.expect('::')
             else:
                 break
-
-        if self.peek() == "#":
-            self.expect("#")
-            suffix = self.parse_suffix()
-        else:
-            suffix = ''
-
-        return FQN(parts, suffix=suffix)
+        return FQN(parts)
 
     def parse_part(self) -> NSPart:
         name = self.parse_name()
+        qualifiers = []
         if self.peek() == '[':
             self.expect('[')
             qualifiers = self.parse_qualifiers()
             self.expect(']')
-            return NSPart(name, qualifiers)
-        else:
-            return NSPart(name, [])
+
+        suffix = ''
+        if self.peek() == '#':
+            self.expect('#')
+            suffix = self.parse_suffix()
+
+        return NSPart(name, qualifiers, suffix)
 
     def parse_qualifiers(self) -> list['FQN']:
         qualifiers = []

@@ -85,6 +85,8 @@ class Context:
             return self.new_struct_type(w_type)
         elif isinstance(w_type, W_LiftedType):
             return self.new_lifted_type(w_type)
+        elif w_type is B.w_type:
+            return C_Type('void *') # XXXXXXXX
         raise NotImplementedError(f'Cannot translate type {w_type} to C')
 
     def c_restype_by_fqn(self, fqn: FQN) -> C_Type:
