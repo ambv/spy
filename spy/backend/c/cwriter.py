@@ -146,6 +146,12 @@ class CModuleWriter:
             intval = self.ctx.vm.unwrap(w_obj)
             c_type = self.ctx.w2c(w_type)
             self.out_globals.wl(f'{c_type} {fqn.c_name} = {intval};')
+        elif isinstance(w_type, W_PtrType):
+            # XXX TEMPORARY HACK
+            # we only support global ptr variables which are NULL for now
+            assert w_obj.addr == 0
+            c_type = self.ctx.w2c(w_type)
+            self.out_globals.wl(f'{c_type} {fqn.c_name} = {{0}};')
         elif isinstance(w_obj, (W_StructType, W_LiftedType)):
             # this forces ctx to emit the struct definition
             self.ctx.w2c(w_obj)
