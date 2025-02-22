@@ -34,7 +34,7 @@ from spy.vm.b import OPERATOR, B
 from spy.vm.object import Member, W_Type, W_Object, builtin_method
 from spy.vm.function import W_Func, W_FuncType
 from spy.vm.builtin import builtin_func, builtin_type
-from spy.vm.primitive import W_Bool
+from spy.vm.primitive import W_Bool, W_Dynamic
 
 if TYPE_CHECKING:
     from spy.vm.vm import SPyVM
@@ -180,6 +180,41 @@ class W_OpArg(W_Object):
         else:
             return W_OpImpl.NULL
 
+    @builtin_method('__GET_color__', color='blue')
+    @staticmethod
+    def w_GET_color(vm: 'SPyVM', wop_x: 'W_OpArg',
+                    wop_attr: 'W_OpArg') -> 'W_OpImpl':
+        from spy.vm.builtin import builtin_func
+        from spy.vm.str import W_Str
+        w_xtype = wop_x.w_static_type
+
+        @builtin_func(w_xtype.fqn, 'get_color')
+        def w_get_color(vm: 'SPyVM', w_oparg: W_OpArg) -> W_Str:
+            return vm.wrap(w_oparg.color)
+
+        return W_OpImpl(w_get_color, [wop_x])
+
+    @builtin_method('__GET_blueval__', color='blue')
+    @staticmethod
+    def w_GET_blueval(vm: 'SPyVM', wop_x: 'W_OpArg',
+                      wop_attr: 'W_OpArg') -> 'W_OpImpl':
+        from spy.vm.builtin import builtin_func
+        from spy.vm.primitive import W_Dynamic
+
+        # imagine to have this app-level code:
+        #     def foo(x: OpArg):
+        #         x.blueval
+        w_xtype = wop_x.w_static_type # this is 'type(x)' (i.e., OpArg)
+
+        @builtin_func(w_xtype.fqn, 'get_blueval')
+        def w_get_blueval(vm: 'SPyVM', w_oparg: W_OpArg) -> W_Dynamic:
+            if w_oparg.color != 'blue':
+                raise SPyRuntimeError('oparg is not blue')
+            return w_oparg.w_blueval
+
+        return W_OpImpl(w_get_blueval, [wop_x])
+
+
 
 @no_type_check
 @builtin_func('operator')
@@ -247,8 +282,15 @@ class W_OpImpl(W_Object):
 
     @builtin_method('__new__')
     @staticmethod
-    def w_spy_new(vm: 'SPyVM', w_cls: W_Type, w_func: W_Func) -> 'W_OpImpl':
-        return W_OpImpl(w_func)
+    def w_spy_new(vm: 'SPyVM', w_cls: W_Type, w_func: W_Func,
+                  w_args: W_Dynamic) -> 'W_OpImpl':
+        # hack hack hack: ideally we would like w_args to be an optional
+        # argument, but we don't have it yet
+        if w_args is B.w_None:
+            return W_OpImpl(w_func)
+        else:
+            # hack hack hack, we assume it's a list[OpArg]
+            return W_OpImpl(w_func, w_args.items_w)
 
 
 W_OpImpl.NULL = W_OpImpl(None)  # type: ignore
